@@ -17,6 +17,7 @@ import {
   Hammer, Map as MapIcon, Square, AlertTriangle, Key,
   EllipsisVertical, ChevronDown, Mic, LoaderCircle,
 } from "lucide-react-native";
+import { Canvas, Circle } from "@shopify/react-native-skia";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -464,30 +465,86 @@ function ErrorMessageView({ text }: { text: string }) {
 }
 
 function ThinkingIndicatorView({ label = "Thinking..." }: { label?: string }) {
-  const { colors, fonts } = useTheme();
-  const spin = useSharedValue(0);
-
-  useEffect(() => {
-    spin.value = withRepeat(
-      withTiming(360, { duration: 900, easing: Easing.linear }),
-      -1,
-      false,
-    );
-  }, [spin]);
-
-  const spinnerStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${spin.value}deg` }],
-  }));
+  const { fonts } = useTheme();
 
   return (
     <View style={styles.thinkingMessage}>
-      <Animated.View style={spinnerStyle}>
-        <LoaderCircle size={15} color={colors.fg.muted} strokeWidth={2} />
-      </Animated.View>
-      <Text style={[styles.thinkingText, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+      <SnakeDotsLoader />
+      <Text style={[styles.thinkingText, { color: "#9a9a9a", fontFamily: fonts.sans.medium }]}>
         {label}
       </Text>
     </View>
+  );
+}
+
+const SNAKE_PATH_ORDER = [2, 1, 0, 3, 6, 7, 8, 5, 4, 1] as const;
+const GRID_POSITIONS = [
+  [0, 0], [1, 0], [2, 0],
+  [0, 1], [1, 1], [2, 1],
+  [0, 2], [1, 2], [2, 2],
+] as const;
+
+function SnakeDotsLoader({
+  radius = 1.6,
+  spacing = 3.8,
+  padding = 0.9,
+}: {
+  radius?: number;
+  spacing?: number;
+  padding?: number;
+}) {
+  const [step, setStep] = useState(0);
+  const canvasSize = radius * 6 + spacing * 2 + padding * 2;
+  const stepSize = radius * 2 + spacing;
+  const totalSteps = SNAKE_PATH_ORDER.length;
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStep((current) => (current + 1) % totalSteps);
+    }, 130);
+    return () => clearInterval(id);
+  }, [totalSteps]);
+
+  const getDistanceFromHead = (dotIndex: number) => {
+    const pathIndex = SNAKE_PATH_ORDER.indexOf(dotIndex as (typeof SNAKE_PATH_ORDER)[number]);
+    if (pathIndex < 0) return totalSteps;
+    return (step - pathIndex + totalSteps) % totalSteps;
+  };
+
+  const getDotOpacity = (dotIndex: number) => {
+    const distance = getDistanceFromHead(dotIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.74;
+    if (distance === 2) return 0.5;
+    if (distance === 3) return 0.34;
+    return 0.22;
+  };
+
+  const getDotColor = (dotIndex: number) => {
+    const distance = getDistanceFromHead(dotIndex);
+    return distance === 0 ? "#ececec" : "#a8a8a8";
+  };
+
+  return (
+    <Canvas style={{ width: canvasSize, height: canvasSize }}>
+      {GRID_POSITIONS.map(([x, y], index) => {
+        const distance = getDistanceFromHead(index);
+        const cx = padding + radius + x * stepSize;
+        const cy = padding + radius + y * stepSize;
+
+        return (
+          <React.Fragment key={index}>
+            <Circle
+              cx={cx}
+              cy={cy}
+              r={radius}
+              color={getDotColor(index)}
+              opacity={getDotOpacity(index)}
+            />
+          </React.Fragment>
+        );
+      })}
+    </Canvas>
   );
 }
 
