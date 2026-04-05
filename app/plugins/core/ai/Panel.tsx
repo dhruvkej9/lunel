@@ -681,50 +681,54 @@ type MessageDisplayItem =
   | { kind: "part"; key: string; part: AIPart }
   | { kind: "command-group"; key: string; parts: AIPart[] };
 
-function isCommandToolPart(part: AIPart): boolean {
-  if (part.type !== "tool" && part.type !== "tool-call" && part.type !== "tool-result") return false;
-  const toolName = String(part.name || part.toolName || "").trim().toLowerCase();
-  return toolName === "command";
+function isGroupablePart(part: AIPart): boolean {
+  return part.type !== "text" && part.type !== "file";
+}
+
+function buildToolGroupLabel(parts: AIPart[]): string {
+  let thinkingCount = 0;
+  let toolCount = 0;
+  for (const p of parts) {
+    if (p.type === "reasoning") thinkingCount += 1;
+    else if (p.type === "tool" || p.type === "tool-call" || p.type === "tool-result" || p.type === "file-change") toolCount += 1;
+  }
+  if (thinkingCount > 0 && toolCount > 0) return `Thinking · ${toolCount} tool${toolCount !== 1 ? "s" : ""}`;
+  if (thinkingCount > 0) return "Thinking";
+  if (toolCount > 0) return `${toolCount} tool${toolCount !== 1 ? "s" : ""}`;
+  return `${parts.length} step${parts.length !== 1 ? "s" : ""}`;
 }
 
 function buildMessageDisplayItems(parts: AIPart[]): MessageDisplayItem[] {
-  const commandIndices: number[] = [];
-  for (let i = 0; i < parts.length; i += 1) {
-    if (isCommandToolPart(parts[i])) commandIndices.push(i);
-  }
-
-  if (commandIndices.length <= 2) {
-    return parts.map((part, i) => ({
-      kind: "part",
-      key: String((part as any).id || `part-${i}`),
-      part,
-    }));
-  }
-
-  const commandIndexSet = new Set(commandIndices);
-  const firstCommandIndex = commandIndices[0];
-  const commandParts = commandIndices.map((index) => parts[index]);
   const items: MessageDisplayItem[] = [];
-
-  for (let i = 0; i < parts.length; i += 1) {
-    if (i === firstCommandIndex) {
-      items.push({
-        kind: "command-group",
-        key: `command-group-${String((parts[i] as any).id || i)}`,
-        parts: commandParts,
-      });
-      continue;
-    }
-
-    if (commandIndexSet.has(i)) continue;
+  let i = 0;
+  while (i < parts.length) {
     const part = parts[i];
-    items.push({
-      kind: "part",
-      key: String((part as any).id || `part-${i}`),
-      part,
-    });
+    if (isGroupablePart(part)) {
+      const runStart = i;
+      while (i < parts.length && isGroupablePart(parts[i])) i += 1;
+      const runParts = parts.slice(runStart, i);
+      if (runParts.length > 1) {
+        items.push({
+          kind: "command-group",
+          key: `tool-group-${String((runParts[0] as any).id || runStart)}`,
+          parts: runParts,
+        });
+      } else {
+        items.push({
+          kind: "part",
+          key: String((runParts[0] as any).id || `part-${runStart}`),
+          part: runParts[0],
+        });
+      }
+    } else {
+      items.push({
+        kind: "part",
+        key: String((part as any).id || `part-${i}`),
+        part,
+      });
+      i += 1;
+    }
   }
-
   return items;
 }
 
@@ -862,6 +866,10 @@ function partHasTextOutput(part: AIPart) {
 }
 
 function getDisplayItemSpacingStyle(previous: MessageDisplayItem, current: MessageDisplayItem, styles: any) {
+  if (previous.kind === "command-group" && current.kind === "command-group") {
+    return styles.messagePartSpacingGroups;
+  }
+
   const previousHasTextOutput = itemHasTextOutput(previous);
   const currentHasTextOutput = itemHasTextOutput(current);
 
@@ -895,6 +903,7 @@ function CommandPartsDropdown({
   onPermissionReply?: (response: PermissionResponse) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const label = buildToolGroupLabel(commandParts);
 
   return (
     <View style={styles.commandGroupContainer}>
@@ -906,7 +915,7 @@ function CommandPartsDropdown({
         <View style={styles.commandGroupHeaderLeft}>
           <SquaresSubtract size={13} color={colors.fg.muted} strokeWidth={2} />
           <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.mono.regular }}>
-            {commandParts.length} commands
+            {label}
           </Text>
         </View>
         <InlineChevronIcon size={14} color={colors.fg.muted} expanded={expanded} />
@@ -914,15 +923,16 @@ function CommandPartsDropdown({
       {expanded ? (
         <View style={styles.commandGroupBody}>
           {commandParts.map((part, index) => (
-            <View key={String((part as any).id || `command-part-${index}`)} style={index > 0 ? styles.commandGroupItemSpacing : undefined}>
-              <ToolCall
+            <View key={String((part as any).id || `command-part-${index}`)}>
+              <MessagePartView
                 part={part}
+                isUser={false}
                 colors={colors}
                 fonts={fonts}
                 radius={radius}
-                permission={pendingPermission}
+                showDetailedView={showDetailedView}
+                pendingPermission={pendingPermission}
                 onPermissionReply={onPermissionReply}
-                compactCommandRow
               />
             </View>
           ))}
@@ -3709,8 +3719,10 @@ const styles = StyleSheet.create({
   messagePartSpacingTight: {
     marginTop: 0,
   },
+  messagePartSpacingGroups: {
+    marginTop: 0,
+  },
   commandGroupContainer: {
-    gap: 8,
   },
   commandGroupHeader: {
     paddingHorizontal: 10,
@@ -3725,10 +3737,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commandGroupBody: {
-    gap: 6,
-  },
-  commandGroupItemSpacing: {
-    marginTop: 6,
+    marginTop: 4,
+    gap: 4,
   },
 
   // Reasoning
@@ -3750,7 +3760,7 @@ const styles = StyleSheet.create({
 
   // Step
   stepContainer: {
-    marginVertical: 2,
+    marginVertical: 0,
   },
   stepContent: {
     flexDirection: "row",
