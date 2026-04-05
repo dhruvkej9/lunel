@@ -6,7 +6,6 @@ import { useRouter } from "expo-router";
 import { AlertCircle, ArrowLeft, ArrowRight, Info, LoaderCircle, QrCode, X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Keyboard,
@@ -308,10 +307,10 @@ const LunelConnect = () => {
 
               {isConnecting && (
                 <View style={styles.scanningOverlay}>
-                  <ActivityIndicator size={40} color={WHITE} />
-                  <Text style={styles.connectingText}>
-                    {isConnecting ? "Connecting..." : "Processing..."}
-                  </Text>
+                  <Animated.View style={{ transform: [{ rotate: loaderSpin }] }}>
+                    <LoaderCircle size={24} color={WHITE} strokeWidth={2} />
+                  </Animated.View>
+                  <Text style={styles.connectingText}>Connecting...</Text>
                 </View>
               )}
             </View>

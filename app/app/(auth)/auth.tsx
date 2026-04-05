@@ -14,7 +14,7 @@ const TABLET_BREAKPOINT = 768;
 const TERMS_URL = "https://app.lunel.dev/terms";
 const PRIVACY_URL = "https://app.lunel.dev/privacy";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const LOGO_SOURCE = require("@/assets/images/icon.png");
+const LOGO_SOURCE = require("@/assets/images/icon-bg.png");
 
 function OpenActionIcon({ size = 18, color = "#111111" }: { size?: number; color?: string }) {
   return (
@@ -501,18 +501,23 @@ export default function Auth() {
         <View style={styles.hero}>
           <View style={styles.centerContent}>
             <View style={styles.brand}>
-              <Image
-                source={LOGO_SOURCE}
+              <View
                 style={[
-                  styles.appIcon,
+                  styles.appIconWrapper,
                   {
                     width: isTablet ? 280 : 180,
                     height: isTablet ? 280 : 180,
+                    backgroundColor: isDark ? "#FFFFFF" : "#000000",
                     borderRadius: 15,
                   },
                 ]}
-                resizeMode="contain"
-              />
+              >
+                <Image
+                  source={LOGO_SOURCE}
+                  style={{ width: "100%", height: "100%", borderRadius: 15 }}
+                  resizeMode="contain"
+                />
+              </View>
               <View style={styles.brandText}>
                 <Text style={[styles.appName, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
                   Lunel
@@ -644,10 +649,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     paddingHorizontal: 16,
   },
-  appIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
+  appIconWrapper: {
     marginBottom: 8,
     overflow: "hidden",
   },

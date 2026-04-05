@@ -66,7 +66,7 @@ export default function Toast({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: "20%",
+    bottom: "10%",
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
