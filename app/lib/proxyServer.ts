@@ -25,6 +25,11 @@ interface TunnelInfo {
   port: number;
   tcpSocket: any;
   proxyWs: WebSocket | null;
+  acceptedAt: number;
+  remoteAddress: string | null;
+  remotePort: number | null;
+  localAddress: string | null;
+  localPort: number | null;
   pendingWriteCount: number;
   remoteFinPending: boolean;
   localEnded: boolean;
@@ -389,6 +394,8 @@ function startSingleServer(port: number): void {
       port,
       remoteAddress: socket?.remoteAddress ?? null,
       remotePort: socket?.remotePort ?? null,
+      localAddress: socket?.localAddress ?? null,
+      localPort: socket?.localPort ?? null,
       hasSessionCode: Boolean(sessionCode),
       hasSessionPassword: Boolean(sessionPassword),
       hasSendControl: Boolean(sendControlMessage),
@@ -490,6 +497,11 @@ async function handleIncomingConnection(tcpSocket: any, port: number): Promise<v
     port,
     tcpSocket,
     proxyWs: null,
+    acceptedAt: Date.now(),
+    remoteAddress: tcpSocket?.remoteAddress ?? null,
+    remotePort: tcpSocket?.remotePort ?? null,
+    localAddress: tcpSocket?.localAddress ?? null,
+    localPort: tcpSocket?.localPort ?? null,
     pendingWriteCount: 0,
     remoteFinPending: false,
     localEnded: false,
@@ -504,6 +516,10 @@ async function handleIncomingConnection(tcpSocket: any, port: number): Promise<v
   logger.info('proxy', 'starting localhost proxy tunnel setup', {
     tunnelId,
     port,
+    remoteAddress: tunnel.remoteAddress,
+    remotePort: tunnel.remotePort,
+    localAddress: tunnel.localAddress,
+    localPort: tunnel.localPort,
     gatewayWsUrl: activeGatewayWsUrl,
     hasSessionCode: Boolean(sessionCode),
     hasSessionPassword: Boolean(sessionPassword),
@@ -638,10 +654,22 @@ async function handleIncomingConnection(tcpSocket: any, port: number): Promise<v
 
     // Step 5: Half-close handling
     tcpSocket.on('end', () => {
+      logger.info('proxy', 'localhost tcp socket ended', {
+        tunnelId,
+        port,
+        remoteAddress: tunnel.remoteAddress,
+        remotePort: tunnel.remotePort,
+      });
       markLocalEnded();
     });
 
     tcpSocket.on('close', () => {
+      logger.info('proxy', 'localhost tcp socket closed', {
+        tunnelId,
+        port,
+        remoteAddress: tunnel.remoteAddress,
+        remotePort: tunnel.remotePort,
+      });
       markLocalEnded();
     });
 
@@ -686,6 +714,11 @@ function closeTunnel(tunnelId: string): void {
   logger.info('proxy', 'closing localhost proxy tunnel', {
     tunnelId,
     port: tunnel.port,
+    remoteAddress: tunnel.remoteAddress,
+    remotePort: tunnel.remotePort,
+    localAddress: tunnel.localAddress,
+    localPort: tunnel.localPort,
+    lifetimeMs: Date.now() - tunnel.acceptedAt,
     pendingWriteCount: tunnel.pendingWriteCount,
     remoteFinPending: tunnel.remoteFinPending,
     localEnded: tunnel.localEnded,

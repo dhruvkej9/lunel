@@ -4,6 +4,7 @@ import { useConnection } from "@/contexts/ConnectionContext";
 import { useSessionRegistryActions } from "@/contexts/SessionRegistry";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography } from "@/constants/themes";
+import { logger } from "@/lib/logger";
 import { X, ArrowLeft, ArrowRight, RotateCw, Search, Globe, Plus, Maximize2, Minimize2, Code, LayoutPanelTop, ArrowDown, ArrowUp, SquareMousePointer } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -52,6 +53,29 @@ interface DevsoleTabState {
   open: boolean;
   section: DevsoleSectionId;
   expanded: boolean;
+}
+
+function classifyBrowserUrl(rawUrl: string): {
+  host: string | null;
+  protocol: string | null;
+  isLocalhost: boolean;
+  isLikelyDevServer: boolean;
+} {
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname || null;
+    const protocol = parsed.protocol || null;
+    const isLocalhost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    const isLikelyDevServer = isLocalhost || ["5000", "7000", "8081"].includes(parsed.port);
+    return { host, protocol, isLocalhost, isLikelyDevServer };
+  } catch {
+    return {
+      host: null,
+      protocol: null,
+      isLocalhost: false,
+      isLikelyDevServer: false,
+    };
+  }
 }
 
 function getDefaultDevsoleState(): DevsoleTabState {
@@ -165,11 +189,11 @@ const DEVSOLE_STUBS: Record<
     eyebrow: "Localhost forwarding",
     title: "Proxy tracking is managed globally",
     description:
-      "Custom localhost ports are tracked once for the whole app session, not per browser tab, so this section stays shared while the rest of devsole remains page-specific.",
+      "Tracked localhost ports are shared across the whole app session, not per browser tab, so this section stays global while the rest of devsole remains page-specific.",
     bullets: [
-      "Track extra localhost ports beyond the built-in dev scan list",
+      "Track localhost ports explicitly from here or via the CLI --extra-ports flag",
       "See which tracked ports are currently open on the CLI machine",
-      "Bring up phone localhost listeners after the CLI confirms state",
+      "Only tracked ports are exposed on phone localhost",
     ],
     metrics: [
       { label: "Scope", value: "Global" },
@@ -1690,6 +1714,11 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
       [newId]: getDefaultDevsoleState(),
     }));
     pageUrlByTabRef.current[newId] = newTab.url;
+    logger.info("browser", "created browser tab", {
+      tabId: newId,
+      url: newTab.url,
+      ...classifyBrowserUrl(newTab.url),
+    });
 
     InteractionManager.runAfterInteractions(() => {
       setTabs((prev) =>
@@ -1703,6 +1732,15 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
 
     const wasActiveTab = activeTabId === tabId;
     const newTabs = tabs.filter((tab) => tab.id !== tabId);
+    const closedTab = tabs.find((tab) => tab.id === tabId);
+    if (closedTab) {
+      logger.info("browser", "closed browser tab", {
+        tabId,
+        wasActiveTab,
+        url: closedTab.url,
+        ...classifyBrowserUrl(closedTab.url),
+      });
+    }
     setTabs(newTabs);
 
     if (wasActiveTab) {
@@ -1773,6 +1811,13 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
       }
     }
 
+    logger.info("browser", "submitting browser url", {
+      tabId: activeTabId,
+      rawInput: urlInput,
+      resolvedUrl: url,
+      ...classifyBrowserUrl(url),
+    });
+
     setTabs(
       tabs.map((tab) => (tab.id === activeTabId ? { ...tab, url } : tab))
     );
@@ -1841,6 +1886,14 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
 
   const handlePageChange = (tabId: string, nextUrl: string) => {
     const previousUrl = pageUrlByTabRef.current[tabId];
+    if (previousUrl !== nextUrl) {
+      logger.info("browser", "browser page changed", {
+        tabId,
+        previousUrl: previousUrl ?? null,
+        nextUrl,
+        ...classifyBrowserUrl(nextUrl),
+      });
+    }
     if (previousUrl && previousUrl !== nextUrl) {
       setConsoleEntriesByTab((current) => ({
         ...current,

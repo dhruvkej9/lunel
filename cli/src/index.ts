@@ -232,56 +232,6 @@ function maybeFinalizeTunnel(tunnelId: string): void {
   }, PROXY_TUNNEL_LINGER_MS);
 }
 
-// Popular development server ports to scan on connect
-const DEV_PORTS: number[] = [
-  1234,  // Parcel
-  1313,  // Hugo
-  2000,  // Deno (alt)
-  3000,  // Next.js / CRA / Remix / Express
-  3001,  // Next.js (alt)
-  3002,  // Dev server (alt)
-  3003,  // Dev server (alt)
-  3333,  // AdonisJS / Nitro
-  4000,  // Gatsby / Redwood
-  4200,  // Angular CLI
-  4321,  // Astro
-  4173,  // Vite preview
-  4444,  // Selenium
-  4567,  // Sinatra
-  5000,  // Flask / Sails.js
-  5001,  // Flask (alt)
-  5173,  // Vite
-  5174,  // Vite (alt)
-  5175,  // Vite (alt)
-  5500,  // Live Server (VS Code)
-  5555,  // Prisma Studio
-  6006,  // Storybook
-  7000,  // Hapi
-  7070,  // Dev server
-  7777,  // Dev server
-  8000,  // Django / Laravel / Gatsby
-  8001,  // Django (alt)
-  8008,  // Dev server
-  8010,  // Dev server
-  8080,  // Vue CLI / Webpack Dev Server / Spring Boot
-  8081,  // Metro Bundler
-  8082,  // Dev server (alt)
-  8100,  // Ionic
-  8200,  // Vault
-  8443,  // HTTPS dev server
-  8787,  // Wrangler (Cloudflare Workers)
-  8888,  // Jupyter Notebook
-  8899,  // Dev server
-  9000,  // PHP / SonarQube
-  9090,  // Prometheus / Cockpit
-  9200,  // Elasticsearch
-  9229,  // Node.js debugger
-  9292,  // Rack (Ruby)
-  10000, // Webmin
-  19006, // Expo web
-  24678, // Vite HMR WebSocket
-];
-
 function parseExtraPortsFromArgs(args: string[]): number[] {
   const values: string[] = [];
 
@@ -2329,7 +2279,10 @@ async function handleHttpRequest(payload: Record<string, unknown>): Promise<Reco
 async function scanDevPorts(): Promise<number[]> {
   const openPorts: number[] = [];
 
-  const scanPorts = Array.from(new Set([...DEV_PORTS, ...trackedProxyPorts])).sort((a, b) => a - b);
+  const scanPorts = Array.from(trackedProxyPorts).sort((a, b) => a - b);
+  if (scanPorts.length === 0) {
+    return openPorts;
+  }
   const checks = scanPorts.map((port) => {
     return new Promise<void>((resolve) => {
       let finished = false;
