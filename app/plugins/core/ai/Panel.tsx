@@ -252,11 +252,6 @@ function formatVoiceDuration(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function formatClockTime(value?: number): string {
-  if (typeof value !== "number" || Number.isNaN(value)) return "";
-  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
 function mergeStreamingText(previous: string, incoming: string): string {
   if (!incoming) return previous;
   if (!previous) return incoming;
@@ -473,8 +468,6 @@ function ReasoningPartView({ part }: { part: AIPart }) {
 function StepStartView({ part }: { part: AIPart }) {
   const { colors, fonts } = useTheme();
   const title = (part.title as string) || "";
-  const time = part.time?.start;
-  const timeStr = formatClockTime(time);
 
   return (
     <View style={styles.stepContainer}>
@@ -482,11 +475,6 @@ function StepStartView({ part }: { part: AIPart }) {
         {title ? (
           <Text style={{ color: colors.fg.subtle, fontSize: 11, fontFamily: fonts.mono.regular }}>
             {title}
-          </Text>
-        ) : null}
-        {timeStr ? (
-          <Text style={{ color: colors.fg.subtle, fontSize: 10, fontFamily: fonts.mono.regular }}>
-            {timeStr}
           </Text>
         ) : null}
       </View>
@@ -796,10 +784,6 @@ function MessageBubble({
   if (isUser) {
     const localStatus = typeof message.metadata?.localStatus === "string" ? message.metadata.localStatus : undefined;
     const isSending = localStatus === "sending" || (localStatus == null && message.id.startsWith("opt-"));
-    const sentTime = !isSending
-      ? (message.time?.created ?? message.time?.updated ?? (typeof message.metadata?.clientCreatedAt === "number" ? message.metadata.clientCreatedAt : undefined))
-      : undefined;
-    const timeLabel = !isSending && sentTime != null ? formatClockTime(sentTime) : null;
     return (
       <View style={{ alignSelf: "flex-end", alignItems: "flex-end", marginVertical: 7 }}>
         <TouchableOpacity
@@ -828,10 +812,6 @@ function MessageBubble({
         </TouchableOpacity>
         {isSending ? (
           <PulsingDots color={colors.fg.subtle} />
-        ) : timeLabel ? (
-          <Text style={{ color: colors.fg.subtle, fontFamily: fonts.mono.regular, fontSize: 11, marginTop: 4, marginRight: 2 }}>
-            {timeLabel}
-          </Text>
         ) : null}
       </View>
     );
