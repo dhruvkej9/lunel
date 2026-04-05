@@ -37,6 +37,8 @@ import { Gesture, GestureDetector, GestureHandlerRootView, ScrollView, Touchable
 import { FlashList } from "@shopify/flash-list";
 import Animated, {
   Easing,
+  ZoomIn,
+  ZoomOut,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -3379,35 +3381,43 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
             </GestureDetector>
 
             {showScrollToBottom && hasContent ? (
-              <Pressable
-                onPress={() => {
-                  autoFollowRef.current = isStreaming;
-                  isNearBottomRef.current = true;
-                  setShowScrollToBottom(false);
-                  scrollToLatest(true);
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                pointerEvents="box-only"
+              <Animated.View
+                entering={ZoomIn.duration(180)}
+                exiting={ZoomOut.duration(140)}
                 style={{
                   position: "absolute",
-                  left: "50%",
-                  transform: [{ translateX: "-50%" }],
+                  left: 0,
+                  right: 0,
                   bottom: isVoiceMode ? 68 : composerHeight + 18,
-                  paddingHorizontal: 8,
-                  paddingVertical: 5,
-                  borderRadius: 8,
-                  backgroundColor: colors.bg.raised,
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: colors.border.secondary,
-                  flexDirection: "row",
                   alignItems: "center",
-                  gap: 6,
                   zIndex: 100,
                 }}
               >
-                <ArrowDownIcon size={16} color={colors.fg.muted} />
-                <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>To the bottom</Text>
-              </Pressable>
+                <Pressable
+                  onPress={() => {
+                    autoFollowRef.current = isStreaming;
+                    isNearBottomRef.current = true;
+                    setShowScrollToBottom(false);
+                    scrollToLatest(true);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  pointerEvents="box-only"
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    borderRadius: 8,
+                    backgroundColor: colors.bg.raised,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: colors.border.secondary,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <ArrowDownIcon size={16} color={colors.fg.muted} />
+                  <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>To the bottom</Text>
+                </Pressable>
+              </Animated.View>
             ) : null}
 
             {/* Voice Capsule */}
