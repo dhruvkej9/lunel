@@ -92,7 +92,7 @@
   - [x] WebSocket Origin validation — `isTrustedRequestOrigin` in proxy
   - [x] git path validation — `assertSafeGitPaths`
   - [x] env injection hardening — `sanitizeProcessEnv`, `BLOCKED_PROCESS_ENV_KEYS`
-- [x] #13 Manager `/health` probe — handled via CLI offline grace timer.
+- [x] #13 Manager `/health` probe — now calls `cleanupExpiredV2State()` on health check.
 
 ## Delivery tasks
 - [ ] Rebuild local `lunel-cli` and verify the rebuilt one is used.

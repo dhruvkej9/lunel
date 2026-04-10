@@ -2981,6 +2981,7 @@ function startManager(): void {
       }
 
       if (path === "/health") {
+        cleanupExpiredV2State();
         const connectedProxies = managerControlSocketsByGateway.size;
         return Response.json({
           status: "ok",
