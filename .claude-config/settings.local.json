@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(bun install:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(NPM_CONFIG_LEGACY_PEER_DEPS=true npm install)",
+      "Bash(npx expo:*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(git reset:*)",
+      "Bash(ls:*)",
+      "Bash(gh repo:*)"
+    ]
+  }
+}
